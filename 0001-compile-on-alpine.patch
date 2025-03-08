@@ -1,0 +1,84 @@
+From be60aa0a7c04d9256cee6fe430822b8a581bdb10 Mon Sep 17 00:00:00 2001
+From: Torsten Dreyer <torsten@t3r.de>
+Date: Sun, 2 Mar 2025 23:02:22 +0100
+Subject: [PATCH] compile on alpine
+
+---
+ src/libcli/connection.cxx |  1 +
+ src/libcli/editor.cxx     |  5 +++++
+ src/libcli/libcli.cxx     |  4 ++++
+ src/server/fg_common.hxx  | 13 ++++++++++++-
+ 4 files changed, 22 insertions(+), 1 deletion(-)
+
+diff --git a/src/libcli/connection.cxx b/src/libcli/connection.cxx
+index 3becddc..6157b90 100644
+--- a/src/libcli/connection.cxx
++++ b/src/libcli/connection.cxx
+@@ -20,6 +20,7 @@
+ #endif
+ 
+ #include <iostream>
++#include <sys/time.h>
+ #include "common.hxx"
+ #include "connection.hxx"
+ 
+diff --git a/src/libcli/editor.cxx b/src/libcli/editor.cxx
+index efaee86..aa77b2f 100644
+--- a/src/libcli/editor.cxx
++++ b/src/libcli/editor.cxx
+@@ -35,6 +35,11 @@
+ 	#endif
+ #endif
+ 
++#ifndef CTRL
++	#define CTRL(a)  ( a & 037 )
++#endif
++
++
+ namespace { namespace ASCII {
+ 	const char BELL		= 0x07;
+ 	const char BACKSPACE	= 0x08;
+diff --git a/src/libcli/libcli.cxx b/src/libcli/libcli.cxx
+index 04e3ade..c0de527 100644
+--- a/src/libcli/libcli.cxx
++++ b/src/libcli/libcli.cxx
+@@ -47,6 +47,10 @@ extern "C" {
+ #endif
+ #endif
+ 
++#ifndef CTRL
++	#define CTRL(a)  ( a & 037 )
++#endif
++
+ namespace
+ {
+ const size_t NOT_IN_HISTORY { -1UL };
+diff --git a/src/server/fg_common.hxx b/src/server/fg_common.hxx
+index f4a09e2..ff190e4 100644
+--- a/src/server/fg_common.hxx
++++ b/src/server/fg_common.hxx
+@@ -6,9 +6,20 @@
+ #endif
+ 
+ #ifndef _MSC_VER
++
++#ifdef __GLIBC__
+ 	#ifndef __FreeBSD__
+-		#include "error.h"
++		#include <error.h>
+ 	#endif
++#else
++		#include <cerrno>
++		#include <cstdio>
++		// Define a simple replacement for error()
++		inline void error(int exit_code, int errnum, const char* msg) {
++		    fprintf(stderr, "%s: %s\n", msg, strerror(errnum));
++		    if (exit_code) exit(exit_code);
++		}
++#endif
+ 	#include <sys/time.h>
+ 	#include <sys/types.h>
+ 	#include <sys/socket.h>
+-- 
+2.46.1
+

@@ -1,0 +1,27 @@
+FROM debian:stable as builder
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    ninja-build \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY 0001-compile-on-alpine.patch .
+
+RUN git clone https://github.com/FlightGear/fgms.git src \
+ && git apply --verbose 0001-compile-on-alpine.patch --directory=src \
+ && cmake -S src -B /build -G Ninja \
+ && cmake --build /build \
+ && cmake --install /build
+
+FROM debian:stable-slim
+COPY --from=builder /usr/local/sbin/fgms /usr/local/sbin/fgms
+USER nobody
+
+EXPOSE 5001/tcp
+EXPOSE 5000/udp
+
+ENTRYPOINT [ "/usr/local/sbin/fgms" ]
